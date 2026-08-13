@@ -1,0 +1,43 @@
+{
+  "name": "unity-action",
+  "version": "0.1.0",
+  "description": "Build Unity projects with the official Unity CLI.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "ncc build src/main.ts -o dist --minify",
+    "check": "pnpm format:check && pnpm typecheck && pnpm test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "github-actions",
+    "unity",
+    "unity-cli",
+    "unity-build"
+  ],
+  "author": "insd47",
+  "license": "MIT",
+  "packageManager": "pnpm@10.24.0",
+  "dependencies": {
+    "@actions/core": "^3.0.1",
+    "@actions/exec": "^3.0.0",
+    "@actions/io": "^3.0.2",
+    "@actions/tool-cache": "^4.0.0",
+    "semver": "^7.7.3",
+    "string-argv": "^0.3.2"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/semver": "^7.7.1",
+    "@vercel/ncc": "^0.38.4",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": "24.x"
+  }
+}

@@ -1,0 +1,59 @@
+name: Unity Build
+description: Build a Unity project with the official Unity CLI.
+author: insd47
+
+inputs:
+  project-path:
+    description: Unity project directory.
+    default: .
+  target:
+    description: Unity BuildTarget. Required unless profile or args provides the build target.
+  output-path:
+    description: Player output path, relative to project-path or absolute.
+    required: true
+  profile:
+    description: Unity 6 Build Profile name or .asset path.
+  versioning-strategy:
+    description: Build version source (none, tag, semantic, or custom).
+    default: none
+  build-version:
+    description: Version used when versioning-strategy is custom.
+  allow-dirty-build:
+    description: Allow a build when the Git worktree has uncommitted changes.
+    default: 'false'
+  editor-version:
+    description: Override the Editor version from ProjectVersion.txt.
+  editor-path:
+    description: Path to a specific Unity Editor binary.
+  architecture:
+    description: Editor architecture (x86_64 or arm64).
+  allow-install:
+    description: Allow Unity CLI to install the required Editor when missing.
+    default: 'false'
+  cli-version:
+    description: Exact Unity CLI version, latest-beta, or installed.
+    default: 1.0.0-beta.4
+  log-file:
+    description: Build log path, relative to project-path or absolute. Defaults to RUNNER_TEMP.
+  args:
+    description: Additional unity build arguments. Promoted options override their matching inputs.
+
+outputs:
+  output-path:
+    description: Absolute Player output path.
+  output-directory:
+    description: Absolute directory containing output-path.
+  log-path:
+    description: Absolute Unity build log path.
+  build-version:
+    description: Resolved build version for tag and custom strategies.
+  cli-version:
+    description: Unity CLI version used by the action.
+
+runs:
+  using: node24
+  main: dist/index.js
+
+branding:
+  color: black
+  icon: box
