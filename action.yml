@@ -14,12 +14,12 @@ inputs:
   profile:
     description: Unity 6 Build Profile name or .asset path.
   versioning-strategy:
-    description: Build version source (none, tag, semantic, or custom).
+    description: Build version source (none, tag, semantic, or custom). Semantic requires --execute-method in args.
     default: none
   build-version:
     description: Version used when versioning-strategy is custom.
   allow-dirty-build:
-    description: Allow a build when the Git worktree has uncommitted changes.
+    description: Allow versioning when the Git worktree has uncommitted changes.
     default: 'false'
   editor-version:
     description: Override the Editor version from ProjectVersion.txt.

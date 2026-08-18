@@ -39,15 +39,48 @@ describe('buildArguments', () => {
     expect(command.args).toContain('--quiet');
   });
 
-  it('normalizes tag versioning into the Unity CLI custom strategy', () => {
+  it('resolves tag versioning without passing unsupported native build options', () => {
     const request = resolveBuild(input({ target: 'StandaloneOSX', outputPath: '/tmp/REVIVE.app' }));
     request.versioningStrategy = 'tag';
 
     const command = buildArguments(request, '/tmp/build.log', 'v1.2.3-rc.1');
 
     expect(command.buildVersion).toBe('1.2.3-rc.1');
-    expect(command.args.join(' ')).toContain('--versioning-strategy custom --build-version 1.2.3-rc.1');
+    expect(command.args).not.toContain('--versioning-strategy');
+    expect(command.args).not.toContain('--build-version');
     expect(command.args.join(' ')).toContain('--log-file /tmp/build.log');
+  });
+
+  it('delegates versioning when an execute method owns the build', () => {
+    const request = resolveBuild(
+      input({
+        versioningStrategy: 'tag',
+        args: '--execute-method REVIVE.Build.BuildScript.Build',
+      }),
+    );
+
+    const command = buildArguments(request, '/tmp/build.log', 'v1.2.3');
+
+    expect(command.args.join(' ')).toContain('--execute-method REVIVE.Build.BuildScript.Build');
+    expect(command.args.join(' ')).toContain('--versioning-strategy custom --build-version 1.2.3');
+  });
+
+  it('rejects semantic versioning for native builds', () => {
+    const request = resolveBuild(input({ versioningStrategy: 'semantic' }));
+
+    expect(() => buildArguments(request, '/tmp/build.log')).toThrow(
+      'versioning-strategy semantic requires --execute-method',
+    );
+  });
+
+  it('rejects native version stamping when a Build Profile can override PlayerSettings', () => {
+    const request = resolveBuild(
+      input({ profile: 'Windows Release', versioningStrategy: 'custom', buildVersion: '1.2.3' }),
+    );
+
+    expect(() => buildArguments(request, '/tmp/build.log')).toThrow(
+      'Native build versioning with a Build Profile requires --execute-method',
+    );
   });
 
   it('accepts a Build Profile without a target', () => {

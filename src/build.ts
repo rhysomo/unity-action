@@ -7,6 +7,7 @@ const valueOptions = new Map<string, ValueOption>([
   ['--output-path', 'outputPath'],
   ['-o', 'outputPath'],
   ['--profile', 'profile'],
+  ['--execute-method', 'executeMethod'],
   ['--versioning-strategy', 'versioningStrategy'],
   ['--build-version', 'buildVersion'],
   ['--editor-version', 'editorVersion'],
@@ -65,6 +66,7 @@ export function resolveBuild(inputs: Inputs): BuildRequest {
     target: values.target ?? inputs.target,
     outputPath: values.outputPath ?? inputs.outputPath,
     profile: values.profile ?? inputs.profile,
+    executeMethod: values.executeMethod ?? '',
     versioningStrategy,
     buildVersion: values.buildVersion ?? inputs.buildVersion,
     allowDirtyBuild,
@@ -88,29 +90,44 @@ export function buildArguments(request: BuildRequest, logPath: string, tagVersio
   args.push('build', '.', '--output-path', request.outputPath);
   if (request.target) args.push('--target', request.target);
   if (request.profile) args.push('--profile', request.profile);
+  if (request.executeMethod) args.push('--execute-method', request.executeMethod);
   if (request.editorVersion) args.push('--editor-version', request.editorVersion);
   if (request.editorPath) args.push('--editor-path', request.editorPath);
   if (request.architecture) args.push('--architecture', request.architecture);
   if (request.allowInstall) args.push('--allow-install');
 
-  let buildVersion = '';
-  if (request.versioningStrategy === 'tag') {
-    if (!tagVersion) throw new Error('A Git tag is required for versioning-strategy tag.');
-    buildVersion = normalizeTagVersion(tagVersion);
-    args.push('--versioning-strategy', 'custom', '--build-version', buildVersion);
-  } else {
-    args.push('--versioning-strategy', request.versioningStrategy);
-    if (request.versioningStrategy === 'custom') {
-      if (!request.buildVersion) throw new Error('build-version is required for versioning-strategy custom.');
-      buildVersion = request.buildVersion;
-      args.push('--build-version', buildVersion);
-    }
+  const buildVersion = resolvedBuildVersion(request, tagVersion);
+  if (request.versioningStrategy === 'semantic' && !request.executeMethod) {
+    throw new Error('versioning-strategy semantic requires --execute-method.');
+  }
+  if (buildVersion && request.profile && !request.executeMethod) {
+    throw new Error('Native build versioning with a Build Profile requires --execute-method.');
   }
 
-  if (request.allowDirtyBuild) args.push('--allow-dirty-build');
+  if (request.executeMethod && request.versioningStrategy !== 'none') {
+    const strategy = request.versioningStrategy === 'tag' ? 'custom' : request.versioningStrategy;
+    args.push('--versioning-strategy', strategy);
+    if (buildVersion) args.push('--build-version', buildVersion);
+  }
+
+  if (request.allowDirtyBuild && request.executeMethod) args.push('--allow-dirty-build');
   args.push('--log-file', logPath, ...request.extraArgs);
 
   return { args, buildVersion };
+}
+
+function resolvedBuildVersion(request: BuildRequest, tagVersion: string): string {
+  if (request.versioningStrategy === 'tag') {
+    if (!tagVersion) throw new Error('A Git tag is required for versioning-strategy tag.');
+    return normalizeTagVersion(tagVersion);
+  }
+
+  if (request.versioningStrategy === 'custom') {
+    if (!request.buildVersion) throw new Error('build-version is required for versioning-strategy custom.');
+    return request.buildVersion;
+  }
+
+  return '';
 }
 
 export function normalizeTagVersion(tag: string): string {
@@ -137,6 +154,7 @@ export interface BuildRequest {
   target: string;
   outputPath: string;
   profile: string;
+  executeMethod: string;
   versioningStrategy: VersioningStrategy;
   buildVersion: string;
   allowDirtyBuild: boolean;
@@ -158,6 +176,7 @@ type ValueOption =
   | 'target'
   | 'outputPath'
   | 'profile'
+  | 'executeMethod'
   | 'versioningStrategy'
   | 'buildVersion'
   | 'editorVersion'

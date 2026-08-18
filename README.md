@@ -25,23 +25,23 @@ file, and returns the Editor exit code.
 
 ## Inputs
 
-| Name                  | Required    | Default        | Description                                                                           |
-| --------------------- | ----------- | -------------- | ------------------------------------------------------------------------------------- |
-| `project-path`        | No          | `.`            | Unity project directory.                                                              |
-| `target`              | Conditional | —              | Unity `BuildTarget`. Required when `profile` is not provided.                         |
-| `output-path`         | Yes         | —              | Final Player path, relative to `project-path` or absolute.                            |
-| `profile`             | Conditional | —              | Unity 6 Build Profile name or `.asset` path.                                          |
-| `versioning-strategy` | No          | `none`         | One of `none`, `tag`, `semantic`, or `custom`.                                        |
-| `build-version`       | Conditional | —              | Version used by the `custom` strategy.                                                |
-| `allow-dirty-build`   | No          | `false`        | Disable the Unity CLI Git dirty-worktree guard.                                       |
-| `editor-version`      | No          | Project config | Override the Editor version.                                                          |
-| `editor-path`         | No          | Auto-detected  | Path to a specific Unity Editor executable.                                           |
-| `architecture`        | No          | Auto-detected  | Editor architecture (`x86_64` or `arm64`).                                            |
-| `allow-install`       | No          | `false`        | Allow the Unity CLI to install a missing Editor.                                      |
-| `cli-version`         | No          | `1.0.0-beta.4` | Exact Unity CLI version, `latest-beta`, or `installed`.                               |
-| `log-file`            | No          | Temporary path | Build log path, relative to `project-path` or absolute.                               |
-| `quiet`               | No          | `false`        | Disable console log streaming while preserving the complete log file.                 |
-| `args`                | No          | —              | Additional `unity build` arguments. Promoted options in `args` override their inputs. |
+| Name                  | Required    | Default        | Description                                                                            |
+| --------------------- | ----------- | -------------- | -------------------------------------------------------------------------------------- |
+| `project-path`        | No          | `.`            | Unity project directory.                                                               |
+| `target`              | Conditional | —              | Unity `BuildTarget`. Required when `profile` is not provided.                          |
+| `output-path`         | Yes         | —              | Final Player path, relative to `project-path` or absolute.                             |
+| `profile`             | Conditional | —              | Unity 6 Build Profile name or `.asset` path.                                           |
+| `versioning-strategy` | No          | `none`         | One of `none`, `tag`, `semantic`, or `custom`. `semantic` requires `--execute-method`. |
+| `build-version`       | Conditional | —              | Version used by the `custom` strategy.                                                 |
+| `allow-dirty-build`   | No          | `false`        | Allow versioning when the Git worktree has uncommitted changes.                        |
+| `editor-version`      | No          | Project config | Override the Editor version.                                                           |
+| `editor-path`         | No          | Auto-detected  | Path to a specific Unity Editor executable.                                            |
+| `architecture`        | No          | Auto-detected  | Editor architecture (`x86_64` or `arm64`).                                             |
+| `allow-install`       | No          | `false`        | Allow the Unity CLI to install a missing Editor.                                       |
+| `cli-version`         | No          | `1.0.0-beta.4` | Exact Unity CLI version, `latest-beta`, or `installed`.                                |
+| `log-file`            | No          | Temporary path | Build log path, relative to `project-path` or absolute.                                |
+| `quiet`               | No          | `false`        | Disable console log streaming while preserving the complete log file.                  |
+| `args`                | No          | —              | Additional `unity build` arguments. Promoted options in `args` override their inputs.  |
 
 Provide either `target` or `profile`. Omit `profile` for a regular build that does not use a Build Profile.
 `output-path` is the final platform-specific output location, not necessarily a directory.
@@ -88,8 +88,10 @@ to the Unity Editor, include the official CLI's `--args` option inside this acti
 
 ## Versioning
 
-The action delegates `none`, `semantic`, and `custom` to the official Unity CLI. It only normalizes `tag` so that
-release tags and application versions can use different formats.
+For the CLI's built-in build, the action resolves `tag` and `custom` versions and temporarily stamps
+`PlayerSettings.bundleVersion` in `ProjectSettings/ProjectSettings.asset`. The original file is restored after the
+build succeeds or fails, and the action rejects a pre-existing dirty worktree unless `allow-dirty-build` is enabled.
+Versioned Build Profile builds require `--execute-method` because a profile can override the global Player Settings.
 
 ```text
 v1.2.3            -> 1.2.3
@@ -97,10 +99,13 @@ v1.2.3-rc.1       -> 1.2.3-rc.1
 v1.2.3.4          -> 1.2.3.4
 ```
 
-The normalized value is passed as `--versioning-strategy custom --build-version <version>`. On GitHub tag events, the
-action uses `GITHUB_REF_NAME`. Otherwise, it finds the nearest tag with `git describe --tags --abbrev=0`, matching the
-official CLI's tag strategy. The `build-version` output remains empty for `semantic` because the Unity CLI calculates
-that version internally.
+On GitHub tag events, the action uses `GITHUB_REF_NAME`. Otherwise, it finds the nearest tag with
+`git describe --tags --abbrev=0`. `semantic` requires a custom build method because the Unity CLI only applies that
+strategy with `--execute-method`.
+
+When `args` includes `--execute-method`, the action delegates `tag`, `custom`, and `semantic` to the Unity CLI instead
+of changing `ProjectSettings.asset`. The custom method owns the Player build and must honor the CLI's forwarded output
+path.
 
 ## Outputs
 

@@ -6,6 +6,7 @@ import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { buildArguments, resolveBuild } from './build.js';
 import { prepareCli } from './cli.js';
 import { inputs } from './inputs.js';
+import { withProjectVersion } from './version.js';
 
 async function main(): Promise<void> {
   const input = inputs();
@@ -17,7 +18,10 @@ async function main(): Promise<void> {
   const outputPath = fromProject(projectPath, request.outputPath);
   const logPath = await buildLogPath(projectPath, input.logFile);
   const tag = request.versioningStrategy === 'tag' ? await currentTag(projectPath) : '';
+  const nativeVersioning = !request.executeMethod && ['tag', 'custom'].includes(request.versioningStrategy);
   const command = buildArguments({ ...request, outputPath }, logPath, tag);
+
+  if (nativeVersioning && !request.allowDirtyBuild) await requireCleanWorktree(projectPath);
 
   core.setOutput('output-path', outputPath);
   core.setOutput('output-directory', dirname(outputPath));
@@ -25,18 +29,20 @@ async function main(): Promise<void> {
   core.setOutput('build-version', command.buildVersion);
   core.setOutput('cli-version', cli.version);
 
-  core.info(`Building ${projectPath}`);
-  const exitCode = await exec.exec(cli.path, command.args, {
-    cwd: projectPath,
-    ignoreReturnCode: true,
+  await withProjectVersion(projectPath, nativeVersioning ? command.buildVersion : '', async () => {
+    core.info(`Building ${projectPath}`);
+    const exitCode = await exec.exec(cli.path, command.args, {
+      cwd: projectPath,
+      ignoreReturnCode: true,
+    });
+
+    if (exitCode !== 0) throw new Error(`Unity CLI exited with code ${exitCode}. Build log: ${logPath}`);
+
+    const output = await stat(outputPath).catch(() => null);
+    if (!output) throw new Error(`Unity CLI succeeded, but output-path was not created: ${outputPath}`);
+
+    core.info(`Unity build completed: ${outputPath}`);
   });
-
-  if (exitCode !== 0) throw new Error(`Unity CLI exited with code ${exitCode}. Build log: ${logPath}`);
-
-  const output = await stat(outputPath).catch(() => null);
-  if (!output) throw new Error(`Unity CLI succeeded, but output-path was not created: ${outputPath}`);
-
-  core.info(`Unity build completed: ${outputPath}`);
 }
 
 async function requireUnityProject(projectPath: string): Promise<void> {
@@ -71,6 +77,19 @@ async function currentTag(projectPath: string): Promise<string> {
   }
 
   return tag;
+}
+
+async function requireCleanWorktree(projectPath: string): Promise<void> {
+  const result = await exec.getExecOutput('git', ['status', '--porcelain=v1'], {
+    cwd: projectPath,
+    ignoreReturnCode: true,
+    silent: true,
+  });
+
+  if (result.exitCode !== 0) throw new Error('Could not inspect the Git worktree before applying the build version.');
+  if (result.stdout.trim()) {
+    throw new Error('Build versioning requires a clean Git worktree; set allow-dirty-build to override.');
+  }
 }
 
 function fromProject(projectPath: string, path: string): string {
