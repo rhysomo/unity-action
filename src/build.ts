@@ -60,6 +60,7 @@ export function resolveBuild(inputs: Inputs): BuildRequest {
   }
 
   const versioningStrategy = strategy(values.versioningStrategy ?? inputs.versioningStrategy);
+  const logMode = mode(inputs.logMode);
 
   return {
     target: values.target ?? inputs.target,
@@ -72,6 +73,7 @@ export function resolveBuild(inputs: Inputs): BuildRequest {
     editorPath: values.editorPath ?? inputs.editorPath,
     architecture: values.architecture ?? inputs.architecture,
     allowInstall,
+    logMode,
     extraArgs,
   };
 }
@@ -82,7 +84,9 @@ export function buildArguments(request: BuildRequest, logPath: string, tagVersio
     throw new Error('Provide target or profile, either as an input or through args.');
   }
 
-  const args = ['--no-banner', '--non-interactive', 'build', '.', '--output-path', request.outputPath];
+  const args = ['--no-banner', '--non-interactive'];
+  if (request.logMode === 'quiet') args.push('--quiet');
+  args.push('build', '.', '--output-path', request.outputPath);
   if (request.target) args.push('--target', request.target);
   if (request.profile) args.push('--profile', request.profile);
   if (request.editorVersion) args.push('--editor-version', request.editorVersion);
@@ -105,6 +109,7 @@ export function buildArguments(request: BuildRequest, logPath: string, tagVersio
   }
 
   if (request.allowDirtyBuild) args.push('--allow-dirty-build');
+  if (request.logMode === 'compact') args.push('--no-tail');
   args.push('--log-file', logPath, ...request.extraArgs);
 
   return { args, buildVersion };
@@ -125,6 +130,12 @@ function strategy(value: string): VersioningStrategy {
   throw new Error(`versioning-strategy must be none, tag, semantic, or custom; got '${value}'.`);
 }
 
+function mode(value: string): LogMode {
+  if (value === 'full' || value === 'compact' || value === 'quiet') return value;
+
+  throw new Error(`log-mode must be full, compact, or quiet; got '${value}'.`);
+}
+
 function unquote(value: string): string {
   const quote = value[0];
   return value.length >= 2 && (quote === '"' || quote === "'") && value.at(-1) === quote ? value.slice(1, -1) : value;
@@ -141,6 +152,7 @@ export interface BuildRequest {
   editorPath: string;
   architecture: string;
   allowInstall: boolean;
+  logMode: LogMode;
   extraArgs: string[];
 }
 
@@ -150,6 +162,7 @@ export interface BuildCommand {
 }
 
 type VersioningStrategy = 'none' | 'tag' | 'semantic' | 'custom';
+type LogMode = 'full' | 'compact' | 'quiet';
 type ValueOption =
   | 'target'
   | 'outputPath'
