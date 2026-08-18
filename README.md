@@ -20,13 +20,13 @@ with `unity build`. It does not require a custom build method or the `com.unity.
     path: ${{ steps.unity.outputs.output-directory }}
 ```
 
-`unity build` launches the Editor in batch mode, writes the build log to a file, and returns the Editor exit code. The
-default `compact` mode preserves the complete log file without streaming the Editor log to the Actions log.
+`unity build` launches the Editor in batch mode, streams its log to the Actions log, writes the complete log to a
+file, and returns the Editor exit code.
 
 ## Inputs
 
 | Name                  | Required    | Default        | Description                                                                           |
-|-----------------------|-------------|----------------|---------------------------------------------------------------------------------------|
+| --------------------- | ----------- | -------------- | ------------------------------------------------------------------------------------- |
 | `project-path`        | No          | `.`            | Unity project directory.                                                              |
 | `target`              | Conditional | —              | Unity `BuildTarget`. Required when `profile` is not provided.                         |
 | `output-path`         | Yes         | —              | Final Player path, relative to `project-path` or absolute.                            |
@@ -40,7 +40,7 @@ default `compact` mode preserves the complete log file without streaming the Edi
 | `allow-install`       | No          | `false`        | Allow the Unity CLI to install a missing Editor.                                      |
 | `cli-version`         | No          | `1.0.0-beta.4` | Exact Unity CLI version, `latest-beta`, or `installed`.                               |
 | `log-file`            | No          | Temporary path | Build log path, relative to `project-path` or absolute.                               |
-| `log-mode`            | No          | `compact`      | Console log mode: `full`, `compact`, or `quiet`. The complete log file is preserved.  |
+| `quiet`               | No          | `false`        | Disable console log streaming while preserving the complete log file.                 |
 | `args`                | No          | —              | Additional `unity build` arguments. Promoted options in `args` override their inputs. |
 
 Provide either `target` or `profile`. Omit `profile` for a regular build that does not use a Build Profile.
@@ -82,9 +82,9 @@ The following options cannot be passed through `args` because the action manages
 - `--quiet`
 - `--format`, `--json`
 
-`full` streams the Editor log in real time, `compact` disables the stream with `--no-tail`, and `quiet` also suppresses
-informational Unity CLI output. Every mode writes the complete build log to `log-file`. To pass raw arguments to the
-Unity Editor, include the official CLI's `--args` option inside this action's `args` input.
+By default, the Editor log streams to the Actions log in real time. Set `quiet: true` to disable the stream and
+suppress informational Unity CLI output. The complete build log is still written to `log-file`. To pass raw arguments
+to the Unity Editor, include the official CLI's `--args` option inside this action's `args` input.
 
 ## Versioning
 
@@ -105,7 +105,7 @@ that version internally.
 ## Outputs
 
 | Name               | Description                                                        |
-|--------------------|--------------------------------------------------------------------|
+| ------------------ | ------------------------------------------------------------------ |
 | `output-path`      | Absolute path to the final Player.                                 |
 | `output-directory` | Absolute path to the directory containing `output-path`.           |
 | `log-path`         | Absolute path to the Unity build log. Set before the build starts. |

@@ -15,7 +15,7 @@ export function inputs(): Inputs {
     allowInstall: core.getBooleanInput('allow-install'),
     cliVersion: core.getInput('cli-version', { required: true }),
     logFile: core.getInput('log-file'),
-    logMode: core.getInput('log-mode') || 'compact',
+    quiet: core.getBooleanInput('quiet'),
     args: core.getInput('args', { trimWhitespace: false }),
   };
 }
@@ -34,6 +34,6 @@ export interface Inputs {
   allowInstall: boolean;
   cliVersion: string;
   logFile: string;
-  logMode: string;
+  quiet: boolean;
   args: string;
 }

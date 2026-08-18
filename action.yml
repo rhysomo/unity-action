@@ -35,9 +35,9 @@ inputs:
     default: 1.0.0-beta.4
   log-file:
     description: Build log path, relative to project-path or absolute. Defaults to RUNNER_TEMP.
-  log-mode:
-    description: Console log mode (full, compact, or quiet). The complete build log is always written to log-file.
-    default: compact
+  quiet:
+    description: Disable console log streaming. The complete build log is still written to log-file.
+    default: 'false'
   args:
     description: Additional unity build arguments. Promoted options override their matching inputs.
 

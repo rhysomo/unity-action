@@ -27,27 +27,16 @@ describe('resolveBuild', () => {
 });
 
 describe('buildArguments', () => {
-  it('uses compact logging by default', () => {
+  it('streams logs by default', () => {
     const command = buildArguments(resolveBuild(input()), '/tmp/build.log');
 
-    expect(command.args).toContain('--no-tail');
     expect(command.args).not.toContain('--quiet');
   });
 
-  it.each([
-    ['full', false, false],
-    ['quiet', false, true],
-  ] as const)('maps %s log mode to Unity CLI flags', (logMode, noTail, quiet) => {
-    const command = buildArguments(resolveBuild(input({ logMode })), '/tmp/build.log');
+  it('disables log streaming in quiet mode', () => {
+    const command = buildArguments(resolveBuild(input({ quiet: true })), '/tmp/build.log');
 
-    expect(command.args.includes('--no-tail')).toBe(noTail);
-    expect(command.args.includes('--quiet')).toBe(quiet);
-  });
-
-  it('rejects an unsupported log mode', () => {
-    expect(() => resolveBuild(input({ logMode: 'verbose' }))).toThrow(
-      "log-mode must be full, compact, or quiet; got 'verbose'.",
-    );
+    expect(command.args).toContain('--quiet');
   });
 
   it('normalizes tag versioning into the Unity CLI custom strategy', () => {
@@ -106,7 +95,7 @@ function input(overrides: Partial<Inputs> = {}): Inputs {
     allowInstall: false,
     cliVersion: '1.0.0-beta.4',
     logFile: '',
-    logMode: 'compact',
+    quiet: false,
     args: '',
     ...overrides,
   };
