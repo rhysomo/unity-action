@@ -8,7 +8,7 @@ with `unity build`. It does not require a custom build method or the `com.unity.
 
 - name: Build Windows Player
   id: unity
-  uses: insd47/unity-action@v1
+  uses: rhysomo/unity-action@v1
   with:
     target: StandaloneWindows64
     output-path: build/Windows/REVIVE.exe
